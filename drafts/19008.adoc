@@ -11,7 +11,7 @@ blog_description: MicroProfile Context Propagation which enhances the concurrenc
 = Enhanced concurrency capabilities with MicroProfile Context Propagation on Open Liberty 19.0.0.8
 Yasmin Aumeeruddy <https://github.com/yasmin-aumeeruddy>
 
-MicroProfile Context Propagation enhances the concurrency capabilities of Java SE and Java EE by providing context awareness between concurrent tasks, which improves consistency and visibility across an application. It allows you to create pipelines of dependent stages that run with predictable thread context regardless of which thread the completion stage action ends up running on. Open Liberty 19.0.0.8 also provides two new introspectors to help explore server dumps from Open Liberty, support for Oracle SSL properties encryption, and the ability to delegate user authentication to an external security provider with OpenID Connect Server.
+MicroProfile Context Propagation enhances the concurrency capabilities of Java SE and Java EE by providing context awareness between concurrent tasks, which improves consistency and visibility across an application. It allows you to create pipelines of dependent stages that run with predictable thread context regardless of which thread the completion stage action ends up running on. Open Liberty 19.0.0.8 also provides two new introspectors to help explore server dumps from Open Liberty and support for Oracle SSL properties encryption.
  
 Give it a try in link:/about/[Open Liberty] 19.0.0.8.
 
@@ -22,7 +22,6 @@ In Open Liberty 19.0.0.8:
 ** <<over, Overlay cache introspector>>
 ** <<zip, Zip cache introspector>>
 * <<ssl, Oracle SSL properties encryption support>>
-* <<ocs, Delegating user authentication with OpenID Connect Server>>
 
 If you're curious about what's coming in future Open Liberty releases, take a look at our <<previews,previews in the latest development builds>>. In particular, get an early insight into MicroProfile Reactive Messaging.
 
@@ -244,106 +243,6 @@ For more details about encrypting passwords for Liberty, see this link:https://w
 
 
 //
-
-[#ocs]
-== Delegating user authentication with OpenID Connect Server
-
-OpenID Connect is a technology that allows delegation of user authentication to an external security provider.
-
-Liberty's OpenID Connect Server feature now includes support for long-lived application passwords and application tokens for use by non-browser applications. Users can acquire these and submit them to a non-browser application, which can then use them to access secured resources on servers configured to accept OAuth access tokens from the OpenID Connect server. The user's password is never exposed to the non-browser app, and the tokens can be revoked independently if needed. App-passwords are exchanged repetitively by the non-browser app for short lived access tokens using a standard OAuth ROPC flow, so if an access token is ever compromised, it is not valid for long. App-tokens are long-lived access tokens.
-
-Web and REST interfaces for users and administrators are added to administer these tokens.
-
-Create a new Liberty server and use this `server.xml`. Comments in `server.xml` explain the new configuration attributes. This server doesn't have a backing database so is for demo purposes only.
-
-Example in XML: 
-[source,xml]
-----
-<server>
-    <featureManager>      
-      <feature>openidConnectServer-1.0</feature>     
-    </featureManager>
-
-    <openidConnectProvider id="OP" oauthProviderRef="OAuth" 
-        signatureAlgorithm="RS256" keyStoreRef="defaultKeyStore" 
-        jwkEnabled="true"
-    >
-    </openidConnectProvider>
-    
-    <!-- internalClientID and internalClientSecret match a defined 
-         client and are used in creating app-passwords and app-tokens.
-         passwordGrantRequiresAppPassword enables the ROPC flow to 
-         exchange app-passwords for short-lived access tokens.
-         appPasswordLifetime and appTokenLifetime set the lifetime of these tokens.
-    --> 
-    <oauthProvider id="OAuth" tokenFormat="mpjwt" 
-      passwordGrantRequiresAppPassword="true" 
-      internalClientId="RP" 
-      internalClientSecret="thesecret" 
-      appPasswordLifetime="30d"
-      >
-        <!-- 
-         localStore for demo use, a backing database is used instead in production. 
-         When localStore is used, all client data and token status is held
-         in memory only. 
-        --> 
-        <localStore>
-         
-          <!-- appPasswordAllowed and appTokenAllowed allow 
-          this client to create app-passwords and app-tokens -->
-          <client displayname="RP" enabled="true"
-                name="RP" secret="thesecret" 
-                scope="openid profile email"
-                preAuthorizedScope="openid profile email"
-                appPasswordAllowed="true"
-                appTokenAllowed="true"
-          >                  
-                <redirect>https://localhost:19443/oidcclient/redirect/RP</redirect>
-          </client>    
-        </localStore>
-    </oauthProvider>
-     
-    <oauth-roles>
-        <authenticated>
-            <special-subject type="ALL_AUTHENTICATED_USERS" />  
-        </authenticated> 
-         <tokenManager>
-           <!-- this user can manage the app-passwords and tokens of other users -->
-            <user name="admin" />
-        </tokenManager> 
-    </oauth-roles>
-
-    <!-- Basic registry for test / development use. -->   
-    <basicRegistry id="basic" realm="customRealm">
-        <user          
-          name="admin"
-          password="adminpwd" />
-        <user
-          name="demouser2"
-          password="demopassword2" />
-         <group name="users">
-             <member name="admin"/>
-             <member name="demouser2" />
-        </group>
-    </basicRegistry>
-
-    <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="29080" httpsPort="29443" />
-    <keyStore id="defaultKeyStore" password="keyspass" />  
-
-</server>
-----
-
-
-Now users can request and manage their own tokens at
-`pass:[]https://host:port/(provider id)/personalTokenManagement`. Token admins can administer the tokens of other users at `pass:[]https://host:port/(provider id)/usersTokenManagement`.
-
-To try it out, start the server and log in as `admin`, `adminpwd` at
-`pass:[]https://localhost:29443/oidc/endpoint/OP/personalTokenManagement`
-
-These tokens can be submitted to non-browser applications, which can in turn use them when accessing secured resources on servers configured to accept access tokens from the OpenID Connect server.
-
-//
-
 
 - - -
 
