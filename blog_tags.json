@@ -1,6 +1,6 @@
 {
     "blog_tags": [
-        {
+        
             "name": "announcements",
             "posts": ["jakarta-ee-9-compatibility",
                       "configure-trustedHeaderOrigin-21002", "ee9-messaging-security-21002-beta",
